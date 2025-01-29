@@ -13,6 +13,15 @@ locals {
   gitlab_project_id = "53959949"
   gitlab_password   = get_env("GITLAB_TOKEN")
 
+  # To encrypt a value:
+  #  echo -n 'some_value_here' | openssl pkeyutl -encrypt -pubin -inkey /Users/leo/.oci/sessions/carneiro/oci_api_key_public.pem | base64
+  gitlab_secrets_decryption_key = "/Users/leo/.oci/sessions/carneiro/oci_api_key.pem"
+  gitlab_secrets_to_fetch = [
+    "MY_ENCRYPTED_VARIABLE",
+    "ANOTHER_ENCRYPTED_VAR",
+    "ONE_MORE_ENCRYPTED_VAR",
+  ]
+
   repo_root = get_repo_root()
   iac_repo  = "terragrunt-tofu-encrypted-state"
   iac_path  = path_relative_to_include()
@@ -34,14 +43,18 @@ generate "gitlab_secrets" {
   path      = "_gitlab_secrets.tofu"
   if_exists = "overwrite_terragrunt"
   contents  = <<-EOF
-    data "gitlab_project_variable" "gitlab_encrypted_variable" {
+    data "gitlab_project_variable" "gitlab_secret" {
+      for_each = toset(${replace(jsonencode(local.gitlab_secrets_to_fetch), "\\\"", "\"")})
+
       project = "${local.gitlab_project_id}"
-      key     = "MY_ENCRYPTED_VARIABLE"
+      key     = each.key
     }
 
     locals {
       secrets = {
-        gitlab_encrypted_variable_plain_text = rsadecrypt(data.gitlab_project_variable.gitlab_encrypted_variable.value, file("/Users/leo/.oci/sessions/carneiro/oci_api_key.pem"))
+        %{ for key in toset(local.gitlab_secrets_to_fetch) ~}
+        ${key} = rsadecrypt(data.gitlab_project_variable.gitlab_secret["${key}"].value, file("${local.gitlab_secrets_decryption_key}"))
+        %{ endfor ~}
       }
     }
   EOF
