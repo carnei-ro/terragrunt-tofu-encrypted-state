@@ -10,6 +10,7 @@
 **/.terraform
 **/_backend.tofu
 **/_encryption.tofu
+**/_gitlab_secrets.tofu
 
 # Ignore all .tool-versions files except the one in the root of the repository
 /**/.tool-versions

@@ -14,3 +14,7 @@ output "hello" {
 output "default_labels" {
   value = var.default_labels
 }
+
+output "gitlab_encrypted_variable_plain_text" {
+  value = local.secrets.gitlab_encrypted_variable_plain_text
+}

@@ -29,23 +29,23 @@ generate "tool_versions" {
   contents  = file(find_in_parent_folders(".tool-versions"))
 }
 
-# # Generate the hetzner provider config
-# generate "hetzner_provider" {
-#   path      = "_tg-hetzner-provider.tofu"
-#   if_exists = "overwrite_terragrunt"
-#   contents  = <<-EOF
-#     data "gitlab_project_variable" "hetzner_token" {
-#       project = "${local.gitlab_project_id}"
-#       key     = format("HETZNER_PROJECT_KEY_%s", upper("${local.project_vars.locals.project_name}"))
-#     }
+# Fetch secret from GITLAB CI/CD Variables
+generate "gitlab_secrets" {
+  path      = "_gitlab_secrets.tofu"
+  if_exists = "overwrite_terragrunt"
+  contents  = <<-EOF
+    data "gitlab_project_variable" "gitlab_encrypted_variable" {
+      project = "${local.gitlab_project_id}"
+      key     = "MY_ENCRYPTED_VARIABLE"
+    }
 
-#     provider "hcloud" {
-#       # alias = "this"
-
-#       token = data.gitlab_project_variable.hetzner_token.value
-#     }
-#   EOF
-# }
+    locals {
+      secrets = {
+        gitlab_encrypted_variable_plain_text = rsadecrypt(data.gitlab_project_variable.gitlab_encrypted_variable.value, file("/Users/leo/.oci/sessions/carneiro/oci_api_key.pem"))
+      }
+    }
+  EOF
+}
 
 generate "encryption" {
   path = "_encryption.tofu"
